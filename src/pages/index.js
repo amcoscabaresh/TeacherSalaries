@@ -29,6 +29,38 @@ const useStyles = createStyles((theme) => ({
   }
 }));
 
+function calcMed(data) {
+  const length = data.length
+  let med;
+  if (length%2 == 0) {
+    med = (data[Math.floor(length/2)]["SY2122"]+data[Math.floor(length/2)-1]["SY2122"])/parseFloat(2)
+  } else {
+    med = data[Math.floor(length/2)]["SY2122"]
+  }
+  return med.toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+}
+
+function calcAvg(data) {
+  let total = 0
+  data.forEach((row) => {
+    total += parseFloat(row["SY2122"])
+  })
+  return (total/parseFloat(data.length)).toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+}
+
+function calcStd(data) {
+  let total = 0
+  data.forEach((row) => {
+    total += parseFloat(row["SY2122"])
+  })
+  let avg = total/parseFloat(data.length)
+  total = 0
+  data.forEach((row) => {
+    total += Math.pow(parseFloat(row["SY2122"])-avg,2)
+  })
+  return Math.sqrt(total/parseFloat(data.length)).toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+}
+
 export default function Home() {
   const [salaryData, setSalaryData] = useState(null);
   const styles = useStyles()
@@ -46,14 +78,25 @@ export default function Home() {
               Duty: row["Duty"].trim(),
               SY2122: cleanNum(row["SY2021-22"]),
             }
-            cleanedData.push(cleanedRow)
+            if (!isNaN(cleanedRow["SY2122"])){
+              cleanedData.push(cleanedRow)
+            }
           })
           setSalaryData(cleanedData)
         });
     }
     loadEmploymentData()
   }, [])
-
+  
+  let med;
+  let avg;
+  let std;
+  if (salaryData) {
+    med = calcMed(salaryData)
+    avg = calcAvg(salaryData)
+    std = calcStd(salaryData)
+  }
+  
   return (
     <>
       <Head>
@@ -66,14 +109,19 @@ export default function Home() {
         <div>
           <h1 className={styles.classes.pageHeader}>Washinton Teacher Salaries 2021-2022</h1>
           <div>
-            <StatsGroup data={[{ stats: 12321, title: "Median Salary", description: "This is the 50th percentile of teacher salaries." }]} />
+            {salaryData && <StatsGroup data={[
+              {stats: med, title: "Median Salary", description: "" }, 
+              {stats: avg, title: "Average Salary", description: "" },
+              {stats: std, title: "Standard Deviation", description: "" }
+              ]} />
+            }
           </div>
           <div>
-            {salaryData && <SalaryHistogram data={salaryData} width={800} height={400}/>}
+            {salaryData && <SalaryHistogram data={salaryData} width={800} height={400} />}
           </div>
 
           <div>
-            {salaryData && <SalaryTable data={salaryData}/>}
+            {salaryData && <SalaryTable data={salaryData} />}
           </div>
 
         </div>
