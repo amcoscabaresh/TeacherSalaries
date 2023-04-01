@@ -7,6 +7,7 @@ import { StatsGroup } from '@/components/Stat'
 import { createStyles } from '@mantine/core';
 import SalaryHistogram from '@/components/Histogram';
 import SalaryTable from '@/components/Table';
+import { Select } from '@mantine/core';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,27 +18,49 @@ const cleanNum = (val) => {
   return val
 }
 
-
-
 const useStyles = createStyles((theme) => ({
   pageContainer: {
-    padding: '2rem'
+    padding: '2rem',
+    maxWidth: '80vw',
+    marginLeft: 'auto',
+    marginRight: 'auto'
   },
   pageHeader: {
     textAlign: 'center',
-    fontSize: '24px'
+    fontSize: '32px'
+  },
+  filterRow: {
+    paddingBottom: '35px',
+    display: 'flex',
+    justifyContent: 'between'
+  },
+  filterItem: {
+    width: '50%',
+    paddingRight: '10px'
+  },
+  statsRow: {
+    paddingBottom: '35px'
+  },
+  chartRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    textAlign: "center"
+  },
+  tableRow: {
+    paddingTop: '20px'
   }
 }));
 
 function calcMed(data) {
   const length = data.length
   let med;
-  if (length%2 == 0) {
-    med = (data[Math.floor(length/2)]["SY2122"]+data[Math.floor(length/2)-1]["SY2122"])/parseFloat(2)
+  if (length % 2 == 0) {
+    med = (data[Math.floor(length / 2)]["SY2122"] + data[Math.floor(length / 2) - 1]["SY2122"]) / parseFloat(2)
   } else {
-    med = data[Math.floor(length/2)]["SY2122"]
+    med = data[Math.floor(length / 2)]["SY2122"]
   }
-  return med.toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+  return med.toLocaleString(undefined, { style: 'currency', currency: "USD", maximumFractionDigits: 0, currencyDisplay: "symbol" })
 }
 
 function calcAvg(data) {
@@ -45,7 +68,7 @@ function calcAvg(data) {
   data.forEach((row) => {
     total += parseFloat(row["SY2122"])
   })
-  return (total/parseFloat(data.length)).toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+  return (total / parseFloat(data.length)).toLocaleString(undefined, { style: 'currency', currency: "USD", maximumFractionDigits: 0, currencyDisplay: "symbol" })
 }
 
 function calcStd(data) {
@@ -53,16 +76,20 @@ function calcStd(data) {
   data.forEach((row) => {
     total += parseFloat(row["SY2122"])
   })
-  let avg = total/parseFloat(data.length)
+  let avg = total / parseFloat(data.length)
   total = 0
   data.forEach((row) => {
-    total += Math.pow(parseFloat(row["SY2122"])-avg,2)
+    total += Math.pow(parseFloat(row["SY2122"]) - avg, 2)
   })
-  return Math.sqrt(total/parseFloat(data.length)).toLocaleString(undefined, {style: 'currency', currency:"USD", maximumFractionDigits:0, currencyDisplay:"symbol"})
+  return Math.sqrt(total / parseFloat(data.length)).toLocaleString(undefined, { style: 'currency', currency: "USD", maximumFractionDigits: 0, currencyDisplay: "symbol" })
 }
 
 export default function Home() {
   const [salaryData, setSalaryData] = useState(null);
+  const [districts, setDistricts] = useState([]);
+  const [titles, setTitles] = useState([])
+  const [selectedDistrict, setSelectedDistrict] = useState("")
+  const [selectedTitle, setSelectedTitle] = useState("")
   const styles = useStyles()
   useEffect(() => {
     const loadEmploymentData = () => {
@@ -71,57 +98,120 @@ export default function Home() {
         .then(responseText => {
           const parsed = Papa.parse(responseText, { header: true, dynamicTyping: true });
           const cleanedData = []
+          const cleanedDistricts = []
+          const cleanedTitles = []
           parsed.data.forEach((row) => {
+            const cleanedTitle = row["Duty"].trim()
+            const cleanedDistrict = row["DistrictName"].trim()
+
+            if (!cleanedDistricts.includes(cleanedDistrict)) {
+              cleanedDistricts.push(cleanedDistrict)
+            }
+            if (!cleanedTitles.includes(cleanedTitle)) {
+              cleanedTitles.push(cleanedTitle)
+            }
+
             const cleanedRow = {
-              DistrictName: row["DistrictName"].trim(),
+              DistrictName: cleanedDistrict,
               Name: row["Name"].trim(),
-              Duty: row["Duty"].trim(),
+              Duty: cleanedTitle,
               SY2122: cleanNum(row["SY2021-22"]),
             }
-            if (!isNaN(cleanedRow["SY2122"])){
+            if (!isNaN(cleanedRow["SY2122"])) {
               cleanedData.push(cleanedRow)
             }
           })
+          const districtObjects = []
+          cleanedDistricts.sort().forEach((district) => {
+            districtObjects.push({ value: district, label: district })
+          })
+          const titleObjects = []
+          cleanedTitles.sort().forEach((title) => {
+            titleObjects.push({ value: title, label: title })
+          })
+
+          setDistricts(districtObjects)
+          setTitles(titleObjects)
           setSalaryData(cleanedData)
         });
     }
     loadEmploymentData()
   }, [])
-  
+
+  let filteredData;
+  if (salaryData) {
+    filteredData = salaryData.filter((cur) => {
+      if (selectedDistrict !== '' && cur.DistrictName !== selectedDistrict) {
+        return false
+      }
+      if (selectedTitle !== '' && cur.Duty !== selectedTitle) {
+        return false
+      }
+      return true
+    })
+  }
+
   let med;
   let avg;
   let std;
-  if (salaryData) {
-    med = calcMed(salaryData)
-    avg = calcAvg(salaryData)
-    std = calcStd(salaryData)
+  if (filteredData) {
+    med = calcMed(filteredData)
+    avg = calcAvg(filteredData)
+    std = calcStd(filteredData)
   }
-  
+
   return (
     <>
       <Head>
-        <title>Create Next App</title>
+        <title>WA Education Salaries</title>
         <meta name="description" content="Generated by create next app" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.classes.pageContainer}>
         <div>
-          <h1 className={styles.classes.pageHeader}>Washinton Teacher Salaries 2021-2022</h1>
-          <div>
-            {salaryData && <StatsGroup data={[
-              {stats: med, title: "Median Salary", description: "" }, 
-              {stats: avg, title: "Average Salary", description: "" },
-              {stats: std, title: "Standard Deviation", description: "" }
-              ]} />
+          <h1 className={styles.classes.pageHeader}>Washinton Education Salaries 2021-2022</h1>
+          <div className={styles.classes.filterRow}>
+            <div className={styles.classes.filterItem}>
+              <Select
+                label="District"
+                placeholder="Select a District"
+                searchable
+                nothingFound="No Matching Districts"
+                onChange={setSelectedDistrict}
+                value={selectedDistrict}
+                clearable
+                data={districts}
+              />
+            </div>
+            <div className={styles.classes.filterItem}>
+              <Select
+                clearable
+                label="Positions"
+                placeholder="Select a Position"
+                searchable
+                nothingFound="No Matching Positions"
+                onChange={setSelectedTitle}
+                value={selectedTitle}
+                data={titles}
+              />
+            </div>
+          </div>
+          <div className={styles.classes.statsRow}>
+            {filteredData && <StatsGroup data={[
+              { stats: med, title: "Median Salary", description: "" },
+              { stats: avg, title: "Average Salary", description: "" },
+              { stats: std, title: "Standard Deviation", description: "" }
+            ]} />
             }
           </div>
-          <div>
-            {salaryData && <SalaryHistogram data={salaryData} width={800} height={400} />}
+          <div className={styles.classes.chartRow}>
+            <h2>Salary Distribution</h2>
+            {filteredData && <SalaryHistogram data={filteredData} width={800} height={400} />}
           </div>
 
-          <div>
-            {salaryData && <SalaryTable data={salaryData} />}
+          <div className={styles.classes.tableRow}>
+            {filteredData && <SalaryTable data={filteredData} />}
           </div>
 
         </div>
