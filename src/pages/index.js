@@ -54,6 +54,10 @@ const useStyles = createStyles((theme) => ({
 
 function calcMed(data) {
   const length = data.length
+  if (length === 0) {
+    return "No Data"
+  }
+
   let med;
   if (length % 2 == 0) {
     med = (data[Math.floor(length / 2)]["SY2122"] + data[Math.floor(length / 2) - 1]["SY2122"]) / parseFloat(2)
@@ -64,6 +68,9 @@ function calcMed(data) {
 }
 
 function calcAvg(data) {
+  if (data.length === 0) {
+    return "No Data"
+  }
   let total = 0
   data.forEach((row) => {
     total += parseFloat(row["SY2122"])
@@ -72,6 +79,9 @@ function calcAvg(data) {
 }
 
 function calcStd(data) {
+  if (data.length === 0) {
+    return "No Data"
+  }
   let total = 0
   data.forEach((row) => {
     total += parseFloat(row["SY2122"])
@@ -207,7 +217,8 @@ export default function Home() {
           </div>
           <div className={styles.classes.chartRow}>
             <h2>Salary Distribution</h2>
-            {filteredData && <SalaryHistogram data={filteredData} width={800} height={400} />}
+            {filteredData && filteredData.length > 0 && <SalaryHistogram data={filteredData} width={800} height={400} />}
+            {filteredData && filteredData.length === 0 && <h2>No Data</h2>}
           </div>
 
           <div className={styles.classes.tableRow}>
