@@ -26,7 +26,7 @@ jobs:
         run: yarn
 
       - name: Build my App
-        run: yarn run build
+        run: yarn run build && yarn run export && touch ./out/.nojekyll
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.4.1
